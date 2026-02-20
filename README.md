@@ -33,16 +33,6 @@ This repo captures analog samples on the Arduino UNO Q MCU (STM32U585) and strea
 
 Keep the analog voltage within 0–3.3V. If your signal is audio-like, you typically need a DC bias and an anti-alias filter.
 
-
-## Option A vs Option B
-
-### Option A (recommended)
-Run inference on the MCU and only send compact results/events to Linux.
-
-- Pros: best timing, least brittle
-- Cons: requires deploying the EI library on MCU
-
-### Option B (this repo)
 Stream raw ADC samples MCU > Linux and run inference in Python on Linux.
 
 - Pros: fast iteration, easy logging, simple model swaps (`.eim`)
