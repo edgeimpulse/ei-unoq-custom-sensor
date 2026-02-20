@@ -1,135 +1,162 @@
-On UNO Q, the Linux processor and MCU are connected internally (UART/SPI). The Arduino router/bridge services typically claim the UART by default, so you may need to stop them to use the raw link. One common mapping reported is:
+# UNO Q Analog A0 @ 44.1 kHz → Linux Python → Edge Impulse (.eim)
 
-Linux side: /dev/ttyHS1
+This repo template captures **analog samples on the Arduino UNO Q MCU** (STM32U585, Arduino sketch) and streams them to the **UNO Q Linux side**, where a **Python script** feeds the samples into the **Edge Impulse Linux runner** using a `.eim` model.
 
-MCU side: Serial1
+> ⚠️ UNO Q plumbing note: the Linux processor and the MCU are connected internally. The Arduino router/bridge services commonly **claim the UART** by default, so you may need to stop them to use the raw serial link.
+>
+> A commonly reported mapping is:
+> - Linux side: `/dev/ttyHS1`
+> - MCU side: `Serial1`
+>
+> Stopping `arduino-router` can free the UART, but this can conflict with App Lab / Bridge workflows.
 
-…and stopping arduino-router can free it (but will conflict with App Lab / Bridge workflows).
 
-B1) MCU Arduino sketch: 44.1 kHz sample A0 and stream frames over Serial1
 
-This sketch:
+## Repo layout
 
-samples A0 at ~44.1 kHz (fixed-point micros scheduler)
+- `arduino/uno_q_adc_streamer/uno_q_adc_streamer.ino`
+  - Samples **A0** at **~44.1 kHz** (fixed-point micros scheduler)
+  - Streams framed **int16** samples over `Serial1` (binary protocol)
+- `linux/unoq_adc_infer.py`
+  - Reads frames from a serial device (default `/dev/ttyHS1`)
+  - Reassembles a window (e.g. **11025 samples** = 250 ms @ 44.1k)
+  - Runs inference via `edge_impulse_linux.runner.ImpulseRunner` on a `.eim`
+- `scripts/stop-router.sh` / `scripts/start-router.sh`
+  - Convenience scripts to stop/start `arduino-router` (if it’s claiming the UART)
+- `LICENSE`, `.gitignore`
 
-packs samples into binary frames
 
-sends over Serial1 at 2,000,000 baud (you can adjust)
 
-/*
-  UNO Q (MCU) - 44.1 kHz ADC sampling on A0 -> stream to Linux over Serial1
+## Hardware wiring
 
-  Transport:
-    Serial1 @ 2,000,000 baud (adjust as needed)
+- Sensor output → `A0`
+- Sensor GND → `GND`
+- Sensor VCC → `3.3V`
 
-  Frame format (little-endian):
-    uint16  MAGIC = 0xA55A
-    uint32  seq
-    uint16  nsamp
-    int16   samples[nsamp]
-    uint16  crc16_ccitt (over MAGIC..samples)
+**Keep the analog voltage within 0–3.3V.**  
+If your signal is audio-like, you typically need a bias and an anti-alias filter.
 
-  Notes:
-  - You will likely need to stop Arduino router services on Linux to use /dev/ttyHS1.
-  - Avoid printing in the sampling loop; it will destroy timing.
-*/
 
-#include <Arduino.h>
 
-static constexpr uint32_t SAMPLE_RATE_HZ = 44100;
-static constexpr uint32_t BAUD = 2000000;
+## Option A vs Option B
 
-// Number of samples per transmitted frame
-static constexpr uint16_t FRAME_SAMPLES = 512;
+### Option A (recommended)
+Run inference on the **MCU** and only send compact results/events to Linux.
+- Pros: best timing + least brittle
+- Cons: you must deploy/run the EI library on MCU
 
-// ADC config
-static constexpr uint8_t ANALOG_PIN = A0;
+### Option B (this repo)
+Stream raw ADC samples MCU → Linux and run inference in Python on Linux.
+- Pros: fastest iteration, easy logging, simple model swaps (`.eim`)
+- Cons: continuous streaming can be brittle if the UART is shared or baud rate is too low
 
-// Scheduler (fixed-point for 44.1k: 22 + remainder)
-static constexpr uint32_t ONE_MILLION = 1000000;
-static constexpr uint32_t PERIOD_US = ONE_MILLION / SAMPLE_RATE_HZ;   // 22
-static constexpr uint32_t REM_US_NUM = ONE_MILLION % SAMPLE_RATE_HZ;  // 29800
-static uint32_t rem_accum = 0;
 
-// Sample buffer for one frame
-static int16_t frame_buf[FRAME_SAMPLES];
-static uint16_t frame_idx = 0;
-static uint32_t seq = 0;
 
-static inline bool time_reached(uint32_t now, uint32_t target) {
-  return (int32_t)(now - target) >= 0;
-}
+## MCU build / flash (Arduino IDE)
 
-// CRC16-CCITT (0x1021), init 0xFFFF
-static uint16_t crc16_ccitt(const uint8_t *data, size_t len) {
-  uint16_t crc = 0xFFFF;
-  for (size_t i = 0; i < len; i++) {
-    crc ^= (uint16_t)data[i] << 8;
-    for (uint8_t b = 0; b < 8; b++) {
-      if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;
-      else crc <<= 1;
-    }
-  }
-  return crc;
-}
+1. Open Arduino IDE
+2. Select **Arduino UNO Q**
+3. Open:
+   - `arduino/uno_q_adc_streamer/uno_q_adc_streamer.ino`
+4. Upload
 
-static void send_frame(const int16_t *samples, uint16_t nsamp, uint32_t seqno) {
-  # ei-unoq-custom-sensor
+Defaults in the sketch:
+- `analogReadResolution(12)`
+- `Serial1` at **2,000,000 baud**
+- `FRAME_SAMPLES = 512`
 
-  # ei-unoq-custom-sensor
+> Tip: avoid adding any `Serial.print()` inside the sampling loop; printing will break timing.
 
-  A tiny example repo for streaming raw ADC samples from an UNO Q MCU to Linux and running an Edge Impulse `.eim` model on the Linux side. Two approaches are provided:
 
-  - Option A (recommended): run inference on the MCU (ADC → ring buffer → on-device classifier) and only send compact events to Linux.
-  - Option B: stream framed ADC samples from MCU to Linux and run the Edge Impulse runner there.
 
-  Files
-  - `unoq_stream.ino` — Arduino sketch for UNO Q: samples A0 at 44.1 kHz and streams framed int16 samples over `Serial1`.
-  - `unoq_adc_infer.py` — Python runner: reads frames from a serial device (e.g. `/dev/ttyHS1`) and classifies windows with an Edge Impulse `.eim` model.
-  - `requirements.txt` — Python dependencies (`edge_impulse_linux`, `pyserial`, `numpy`).
-  - `LICENSE` — MIT license.
-  - `.gitignore` — ignores common Python/Arduino artifacts and `.eim` files.
+## Linux setup (on UNO Q)
 
-  Quickstart (Linux)
+### 1) Install Python deps
 
-  1. Stop any router/bridge that may claim the UART (if needed):
+```bash
+python3 -m pip install --upgrade pip
+python3 -m pip install edge_impulse_linux pyserial numpy
+```
+2) Download a model .eim
 
-  ```bash
-  sudo service arduino-router stop
-  ```
+From your Edge Impulse project (on the UNO Q Linux side):
 
-  2. Install Python deps:
+edge-impulse-linux-runner --download modelfile.eim
 
-  ```bash
-  python3 -m pip install --upgrade pip
-  python3 -m pip install -r requirements.txt
-  ```
+Or copy an existing .eim into the repo.
 
-  3. Download or copy your Edge Impulse model into the repo (example: `modelfile.eim`).
+3) Free the UART device (if needed)
 
-  4. Run the Python runner (example):
+If /dev/ttyHS1 is busy:
 
-  ```bash
-  python3 unoq_adc_infer.py --model modelfile.eim --port /dev/ttyHS1 --baud 2000000 \
-    --frame-samples 512 --window-samples 11025 --center
-  ```
+sudo ./scripts/stop-router.sh
 
-  Protocol (streamed frames)
+To restore later:
 
-  Each frame sent from the MCU is little-endian and formatted as:
+sudo ./scripts/start-router.sh
+4) Run inference
 
-  - `uint16` MAGIC = `0xA55A`
-  - `uint32` seq (frame sequence number)
-  - `uint16` nsamp (number of int16 samples)
-  - `int16[]` samples (nsamp values)
-  - `uint16` crc16_ccitt (CRC over header+payload)
+Example for a 250 ms window (11025 samples @ 44.1 kHz):
 
-  Notes
-  - Sampling: 44.1 kHz, 16-bit samples → ~88 kB/s raw stream. Streaming continuously can be brittle over lower baud rates or when other services claim the UART.
-  - On UNO Q, the Linux processor and MCU are commonly mapped: Linux `/dev/ttyHS1` ↔ MCU `Serial1`.
-  - Avoid `Serial.print` in the tight sampling loop on the MCU — it will break timing.
-  - Adjust `FRAME_SAMPLES`, baud rate, and `window-samples` to match your model and link quality.
+python3 linux/unoq_adc_infer.py \
+  --model modelfile.eim \
+  --port /dev/ttyHS1 \
+  --baud 2000000 \
+  --frame-samples 512 \
+  --window-samples 11025 \
+  --adc-bits 12 \
+  --center
+Stream protocol (MCU → Linux)
 
-  License
+Each frame sent by the MCU is little-endian:
 
-  This project is licensed under the MIT License. See `LICENSE`.
+uint16 MAGIC = 0xA55A
+
+uint32 seq (frame sequence number)
+
+uint16 nsamp (number of int16 samples)
+
+int16[nsamp] samples (raw ADC codes from analogRead)
+
+uint16 crc16_ccitt (CRC over header + payload)
+
+The Python script:
+
+resynchronizes by scanning for MAGIC
+
+validates CRC16-CCITT
+
+warns if seq jumps (drops/resync events)
+
+Tuning
+Window size must match your model
+
+--window-samples must match the model input length. Common values at 44.1 kHz:
+
+250 ms → 11025
+
+500 ms → 22050
+
+1000 ms → 44100
+
+Normalization / centering
+
+--center: maps ADC codes to [-1..1] (typical for audio-like raw signals)
+
+without --center: maps ADC codes to [0..1]
+
+ADC resolution
+
+If you change analogReadResolution() in the sketch, update:
+
+--adc-bits in the Python script
+
+Link stability
+
+If you see CRC mismatches or frequent seq jumps:
+
+Increase baud rate (or reduce FRAME_SAMPLES)
+
+Ensure arduino-router isn’t sharing the UART
+
+Reduce Linux load while testing
