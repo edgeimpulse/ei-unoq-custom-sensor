@@ -1,4 +1,4 @@
-# UNO Q Custom Sensor A0 Example > Linux Python > Edge Impulse (.eim)
+# UNO Q Custom Analogue Sensor Example > Linux Python > Edge Impulse (.eim)
 
 This repo captures analog samples on the Arduino UNO Q MCU (STM32U585) and streams them to the UNO Q Linux side, where a Python script feeds the samples into the Edge Impulse Linux runner using a `.eim` model.
 
