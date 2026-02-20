@@ -1,16 +1,3 @@
-Option A (recommended): sample + infer on the MCU (Arduino sketch)
-
-This avoids bandwidth problems and service conflicts. At 44.1 kHz:
-
-int16 stream bandwidth = 44100 * 2 ≈ 88 kB/s (fine)
-
-but if you try to push that through low baud links or via router services, it becomes brittle.
-
-If you want, I’ll give you a “full” MCU inference sketch (ADC → ring buffer → run_classifier()), but you asked specifically about Linux runner, so here’s the streaming variant first.
-
-Option B: MCU samples A0, streams to Linux, Python runs Edge Impulse inference
-Critical UNO Q plumbing detail (Linux↔MCU link)
-
 On UNO Q, the Linux processor and MCU are connected internally (UART/SPI). The Arduino router/bridge services typically claim the UART by default, so you may need to stop them to use the raw link. One common mapping reported is:
 
 Linux side: /dev/ttyHS1
