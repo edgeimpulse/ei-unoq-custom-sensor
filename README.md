@@ -1,4 +1,4 @@
-# UNO Q Custom Sensor A0 Example → Linux Python → Edge Impulse (.eim)
+# UNO Q Custom Sensor A0 Example > Linux Python > Edge Impulse (.eim)
 
 This repo captures analog samples on the Arduino UNO Q MCU (STM32U585) and streams them to the UNO Q Linux side, where a Python script feeds the samples into the Edge Impulse Linux runner using a `.eim` model.
 
@@ -27,9 +27,9 @@ This repo captures analog samples on the Arduino UNO Q MCU (STM32U585) and strea
 
 ## Hardware wiring
 
-- Sensor output → `A0`
-- Sensor GND → `GND`
-- Sensor VCC → `3.3V`
+- Sensor output > `A0`
+- Sensor GND > `GND`
+- Sensor VCC > `3.3V`
 
 Keep the analog voltage within 0–3.3V. If your signal is audio-like, you typically need a DC bias and an anti-alias filter.
 
@@ -43,7 +43,7 @@ Run inference on the MCU and only send compact results/events to Linux.
 - Cons: requires deploying the EI library on MCU
 
 ### Option B (this repo)
-Stream raw ADC samples MCU → Linux and run inference in Python on Linux.
+Stream raw ADC samples MCU > Linux and run inference in Python on Linux.
 
 - Pros: fast iteration, easy logging, simple model swaps (`.eim`)
 - Cons: continuous streaming can be brittle if the UART is shared or baud is too low
@@ -114,7 +114,7 @@ python3 linux/unoq_adc_infer.py \
 ```
 
 
-## Stream protocol (MCU → Linux)
+## Stream protocol (MCU > Linux)
 
 Each frame sent by the MCU is little-endian and formatted as:
 
@@ -137,9 +137,9 @@ Each frame sent by the MCU is little-endian and formatted as:
 ### Window size
 `--window-samples` must match the model input length. Common values at 44.1 kHz:
 
-- 250 ms → 11025
-- 500 ms → 22050
-- 1000 ms → 44100
+- 250 ms > 11025
+- 500 ms > 22050
+- 1000 ms > 44100
 
 ### Normalization / centering
 
