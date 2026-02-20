@@ -59,9 +59,26 @@ Defaults in the sketch:
 
 ### 1) Install Python deps
 
+
+
 ```bash
 python3 -m pip install --upgrade pip
 python3 -m pip install edge_impulse_linux pyserial numpy
+
+sudo apt install build-essential
+sudo apt install portaudio19-dev python3-dev
+
+git clone https://github.com/edgeimpulse/linux-sdk-python/cd linux-python-sdk/
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip install -r requirements.txt 
+ 
+sudo apt install build-essential
+sudo apt install portaudio19-dev python3-dev
+ 
+sudo apt install build-essential
+sudo apt install portaudio19-dev python3-dev
 ```
 
 ### 2) Download a model `.eim`
