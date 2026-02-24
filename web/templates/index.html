@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Samples</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="topbar">
+    <div class="title">Samples</div>
+    <div id="connBadge" class="badge badge-ok">Connected</div>
+  </div>
+
+  <div class="container">
+    {% for s in samples %}
+      <a class="card" href="{{ url_for('sample_page', sample_name=s) }}">{{ s }}</a>
+    {% endfor %}
+  </div>
+
+  <script src="{{ url_for('static', filename='health.js') }}"></script>
+</body>
+</html>

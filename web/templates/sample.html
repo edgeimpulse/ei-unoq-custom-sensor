@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{{ sample_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="topbar">
+    <a class="iconbtn" href="{{ url_for('index') }}">←</a>
+    <div class="title">Denoise</div>
+    <div id="connBadge" class="badge badge-ok">Connected</div>
+  </div>
+
+  <div class="container">
+    <div class="controls">
+      <button id="btnDenoise" class="btn primary">Denoise</button>
+      <button id="btnResetZoom" class="btn secondary">Reset zoom</button>
+      <button id="btnErase" class="btn warn">Erase edits</button>
+
+      <button id="btnPlayNoisy" class="btn ghost">Play Noisy</button>
+      <button id="btnPlayDenoised" class="btn ghost" disabled>Play Denoised</button>
+    </div>
+
+    <div class="card panel">
+      <div class="field">
+        <label>Model</label>
+        <select id="modelSelect">
+          {% for m in models %}
+            <option value="{{ m }}" {% if m == default_model %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <div class="hint">
+          Recommended: models containing <b>ZCHMix</b>. Others may be quantization experiments.
+        </div>
+      </div>
+
+      <pre id="metaBox" class="meta">Loading…</pre>
+    </div>
+
+    <div class="card panel">
+      <div class="panelHeader">
+        <div class="panelTitle">NOISY SPECTROGRAM</div>
+        <div class="pill">Tap to zoom</div>
+      </div>
+      <div class="imgWrap">
+        <div id="noisySpinner" class="spinner hidden"></div>
+        <img id="imgNoisy" class="spectro" alt="Noisy spectrogram"/>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <div class="panelHeader">
+        <div class="panelTitle">DENOISED SPECTROGRAM</div>
+      </div>
+      <div class="imgWrap">
+        <div id="denoisedSpinner" class="spinner hidden"></div>
+        <img id="imgDenoised" class="spectro placeholder" alt="Denoised spectrogram"/>
+        <div id="denoisedPlaceholder" class="overlayText">Press Denoise to compute</div>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <div class="panelHeader"><div class="panelTitle">ZOOMED NOISY (1s)</div></div>
+      <div class="imgWrap">
+        <img id="imgZoomNoisy" class="spectro" alt="Zoomed noisy"/>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <div class="panelHeader"><div class="panelTitle">ZOOMED DENOISED (1s)</div></div>
+      <div class="imgWrap">
+        <img id="imgZoomDenoised" class="spectro" alt="Zoomed denoised"/>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    window.DEMO = {
+      sampleName: "{{ sample_name }}",
+    };
+  </script>
+  <script src="{{ url_for('static', filename='health.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
