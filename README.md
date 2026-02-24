@@ -1,4 +1,4 @@
-# UNO Q Analog A0 @ 44.1 kHz → Linux Python → Edge Impulse (.eim)
+# UNO Q Analog A0 @ 44.1 kHz to Linux Python to Edge Impulse (.eim)
 
 This repo captures analog samples on the Arduino UNO Q MCU (STM32U585) and streams them to the UNO Q Linux side, where a Python script feeds the samples into the Edge Impulse Linux runner using a `.eim` model.
 
@@ -27,13 +27,13 @@ This repo captures analog samples on the Arduino UNO Q MCU (STM32U585) and strea
 
 ## Hardware wiring
 
-- Sensor output → `A0`
-- Sensor GND → `GND`
-- Sensor VCC → `3.3V`
+- Sensor output -> `A0`
+- Sensor GND -> `GND`
+- Sensor VCC -> `3.3V`
 
 Keep the analog voltage within 0–3.3V. If your signal is audio-like, you typically need a DC bias and an anti-alias filter.
 
-Stream raw ADC samples MCU → Linux and run inference in Python on Linux.
+Stream raw ADC samples from MCU to Linux and run inference in Python on Linux.
 
 - Pros: fast iteration, easy logging, simple model swaps (`.eim`)
 - Cons: continuous streaming can be brittle if the UART is shared or baud is too low
@@ -73,23 +73,6 @@ edge-impulse-linux-runner --download modelfile.eim
 ```
 
 Or copy an existing `.eim` into the repo.
-
-# UNO Q Custom Analogue Sensor Example
-## MCU (ADC) ➜ Linux (Python) ➜ Edge Impulse (.eim) ➜ Optional Web App Demo UI
-
-This repository provides a copy/paste runnable demo for the UNO Q pipeline and an optional mobile-friendly web UI. The repo contains:
-
-- `arduino/uno_q_adc_streamer/uno_q_adc_streamer.ino` — MCU ADC streamer (samples A0, streams frames via `Serial1`).
-- `linux/unoq_adc_infer.py` — reader/infer script (reads serial frames and runs an Edge Impulse `.eim`).
-- `web/` — optional Flask UI (templates + static JS/CSS + server `web/app.py`).
-- `scripts/stop-router.sh` and `scripts/start-router.sh` — convenience scripts to free/restore the UNO Q UART if `arduino-router` is active.
-
-Quick notes:
-
-- Linux UART device commonly used for the MCU link: `/dev/ttyHS1` (Linux side). The MCU exposes `Serial1`.
-- If `arduino-router` holds the UART you'll need to stop it before using the serial link.
-
----
 
 ## MCU (Arduino) flash
 
